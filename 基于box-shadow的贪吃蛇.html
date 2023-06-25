@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+        .game-box {
+            position: absolute;
+            left: -20px;
+            width: 20px;
+            height: 20px;
+            color: rgba(red, green, blue, 1);
+            box-shadow: 20px 20px 0 red,20px 80px 0 red;
+        }
+        body {
+            position: relative;
+            margin-left: 20px;
+            border: 1px solid black;
+            width: 95vw;
+            height: 95vh;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-box"></div>
+    <script>
+        class Snake {
+            /***
+             * speed:蛇速度
+             * long:蛇初始长度
+             * width:单个方块宽度
+             * ***/
+            constructor(speed, long, width) {
+                this.speed = speed;
+                this.long = long;
+                this.width = width;
+                this.snake = document.querySelector('.game-box');
+                this.snake.style.width = width + 'px';
+                this.snake.style.height = width + 'px';
+                this.snake.style.left = -width + 'px';
+                // 自动设置场地大小
+                document.body.style.width = Math.floor(document.body.clientWidth / this.width) * this.width + 'px';
+                document.body.style.height = Math.floor(document.body.clientHeight / this.width) * this.width + 'px';
+                for (let i = 0; i < this.long; i++) {
+                    if (i == this.long - 1) {
+                        this.snakeArr.push({
+                            x: i,
+                            y: 0,
+                            color: 'orange'
+                        })
+                    } else {
+                        this.snakeArr.push({
+                            x: i,
+                            y: 0,
+                            color: 'red'
+                        })
+                    }
+                }
+            }
+            direction = 'right'
+            beforeDirection = 'right'
+            // 蛇节点存放
+            snakeArr = []
+            // 蛇dom
+            snake = null
+            // 运行状态
+            moveTimer = null
+            controlTime = null
+            // 食物存储
+            foodArr = []
+
+            // 更新视图元素
+            updateSnake() {
+                let allArr = this.foodArr.concat(this.snakeArr)
+                let boxShadow = allArr.reduce((pre, cur, index) => {
+                    // console.log('pre', pre)
+                    if (index == allArr.length - 1) {
+                        return pre + `${cur.x * this.width}px ${cur.y * this.width}px 0 ${cur.color}`
+                    }
+                    return pre + `${cur.x * this.width}px ${cur.y * this.width}px 0 ${cur.color},`
+                }, '')
+                // console.log(boxShadow, this.snake)
+                this.foodControl();
+                this.snake.style.boxShadow = boxShadow;
+            }
+
+            // 蛇运动控制
+            move() {
+                this.moveTimer = setInterval(() => {
+                    // 将最后一个删掉，插入第一个，变化颜色和位置即可
+                    let startBody = this.snakeArr.shift();
+                    let lastBody = this.snakeArr.at(-1)
+                    startBody.color = 'orange'
+                    lastBody.color = 'red'
+                    // console.log(11111112222222222, this.direction)
+                    if (this.beforeDirection == 'right' && this.direction == 'left' || this.beforeDirection == 'up' && this.direction == 'down' || this.beforeDirection == 'left' && this.direction == 'right' || this.beforeDirection == 'down' && this.direction == 'up') {
+                        this.direction = this.beforeDirection;
+                    }
+                    if (this.direction === 'right') {
+                        startBody.x = lastBody.x + 1;
+                        startBody.y = lastBody.y;
+                    } else if (this.direction === 'left') {
+                        startBody.x = lastBody.x - 1;
+                        startBody.y = lastBody.y;
+                    } else if (this.direction === 'down') {
+                        startBody.x = lastBody.x;
+                        startBody.y = lastBody.y + 1;
+                    } else if (this.direction === 'up') {
+                        startBody.x = lastBody.x;
+                        startBody.y = lastBody.y - 1;
+                    }
+                    startBody.direction = this.direction;
+                    this.beforeDirection = this.direction;
+                    this.snakeArr.push(startBody);
+                    if (this.snakeArr.length == Math.floor(document.body.clientWidth / this.width) * Math.floor(document.body.clientHeight / this.width)) {
+                        console.log('win!!!!!!!')
+                        alert('游戏通关！！！！！！！！')
+                        clearInterval(this.moveTimer)
+                        clearInterval(this.controlTimer)
+                        this.moveTimer = null;
+                        this.controlTimer = null;
+                        return;
+                    }
+                    // 死亡检测
+                    if (this.deadControl()) {
+                        console.log('dead!!!!!!')
+                        alert('你挂了！！！！！！')
+                        clearInterval(this.moveTimer)
+                        clearInterval(this.controlTimer)
+                        this.moveTimer = null;
+                        this.controlTimer = null;
+                        return;
+                    }
+                    // 食物检测
+                    this.eatControl();
+                    this.updateSnake();
+                }, 500 / this.speed)
+            }
+
+            // 游戏控制器，上下左右控制
+            gameControl() {
+                let keyCodes = []
+                let model = 1;
+                document.addEventListener('keydown',function (event) {
+                    keyCodes.includes(event.keyCode) ? '' : keyCodes.push(event.keyCode)
+                    console.log('down_key', keyCodes)
+                })
+                document.addEventListener('keyup',function (event) {
+                    keyCodes.splice(keyCodes.indexOf(event.keyCode), 1)
+                })
+                setInterval(() => {
+                    if (model === 1 && keyCodes.length > 0) {
+                        keyCodes.forEach(item => {
+                            switch (item) {
+                            case 37:
+                                this.direction = 'left';
+                                break;
+                            case 38:
+                                this.direction = 'up';
+                                break;
+                            case 39:
+                                this.direction = 'right';
+                                break;
+                            case 40:
+                                this.direction = 'down';
+                                break;
+                            }
+                        })
+                    }
+                    if (model === 2 && keyCodes.length > 0) {
+                        keyCodes.forEach(item => {
+                            switch (item) {
+                            case 65:
+                                this.direction = 'left';
+                                break;
+                            case 87:
+                                this.direction = 'down';
+                                break;
+                            case 68:
+                                this.direction = 'right';
+                                break;
+                            case 83:
+                                this.direction = 'up';
+                                break;
+                            }
+                        })
+                    }
+                }, 20)
+            }
+
+            // 死亡检测
+            deadControl() {
+                // 1.当头和身子合并，判断死亡
+                let head = this.snakeArr.at(-1)
+                let isDead = false
+                isDead = this.snakeArr.some((item, index) => {
+                    if (head.x === item.x && head.y === item.y && index != this.snakeArr.length - 1) {
+                        item.color = 'blue';
+                        this.updateSnake();
+                        return true
+                    }
+                    return false;
+                })
+                // console.log(111111111111111, isDead)
+
+                // 2.当碰到墙壁时，判断死亡
+                let sceneWidthCount = Math.floor(document.body.clientWidth / this.width);
+                let sceneHightCount = Math.floor(document.body.clientHeight / this.width);
+                console.log(77777777777, head)
+                // y要大于等于,x要小于1，实测得出结论
+                if (head.x < 1 || head.y < 0 || head.x > sceneWidthCount || head.y >= sceneHightCount) {
+                    // console.log(2222222222, isDead)
+                    isDead = true;
+                }
+                return isDead;
+            }
+
+            // 被吃完了生成一个食物
+            foodControl() {
+                if (this.foodArr.length < 1) {
+                    this.foodInBody();
+                }
+            }
+
+            // 辅助函数，判断食物生成位置
+            foodInBody() {
+                let sceneWidthCount = Math.floor(document.body.clientWidth / this.width);
+                let sceneHightCount = Math.floor(document.body.clientHeight / this.width);
+                // 场景总共的格子数
+                let countSum = sceneWidthCount * sceneHightCount;
+                // 排除有食物和身子的格子
+                let countArr = [];
+                for (let i = 0; i < countSum; i ++) {
+                    countArr.push(i + 1);
+                    // console.log(66666666, JSON.stringify(countArr))
+                    for (let j = 0; j < this.snakeArr.length; j ++) {
+                        if (this.snakeArr[j].x + sceneWidthCount * this.snakeArr[j].y == i + 1) {
+                            countArr.splice(countArr.indexOf(i + 1), 1)
+                            // console.log(9999999999, this.snakeArr[j], i, JSON.stringify(countArr))
+                            break;
+                        }
+                    }
+                }
+                let randomNum = Math.floor(Math.random() * countArr.length);
+                let newX = parseInt(countArr[randomNum] % sceneWidthCount);
+                let newY = countArr[randomNum] % sceneWidthCount == 0 ? Math.floor((countArr[randomNum]) / sceneWidthCount) - 1 : Math.floor((countArr[randomNum]) / sceneWidthCount);
+                this.foodArr.push({
+                    x: newX == 0 ? 9 : newX,
+                    y: newY,
+                    color: 'yellow'
+                })
+                console.log(88888777777777,randomNum,countArr[randomNum], this.foodArr)
+            }
+
+            // 吃食物判定
+            eatControl() {
+                // 头部和食物的位置判断，食物目前是每次只有一个，吃完了再生成，吃了在尾部插入一个新的身体，根据尾部节点的位置判断
+                if (this.snakeArr.at(-1).x == this.foodArr[0].x && this.snakeArr.at(-1).y == this.foodArr[0].y) {
+                    let newX = '';
+                    let newY = '';
+                    if (this.snakeArr[0].direction == 'left') {
+                        newX = this.snakeArr[0].x + 1;
+                        newY = this.snakeArr[0].y;
+                    } else if (this.snakeArr[0].direction == 'right') {
+                        newX = this.snakeArr[0].x - 1;
+                        newY = this.snakeArr[0].y;
+                    } else if (this.snakeArr[0].direction == 'top') {
+                        newX = this.snakeArr[0].x;
+                        newY = this.snakeArr[0].y + 1;
+                    } else if (this.snakeArr[0].direction == 'down') {
+                        newX = this.snakeArr[0].x;
+                        newY = this.snakeArr[0].y - 1;
+                    }
+                    this.snakeArr.unshift({
+                        x: newX,
+                        y: newY,
+                        color: 'red'
+                    });
+                    this.foodArr.splice(0, 1);
+                    console.log(333333333333, JSON.stringify(this.snakeArr), this.foodArr)
+                }
+            }
+        }
+
+        let snake = new Snake(1, 5, 50);
+        snake.updateSnake()
+        snake.move()
+        snake.gameControl()
+    </script>
+</body>
+</html>
