@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>贪吃蛇</title>
     <style>
         * {
             margin: 0;
@@ -39,6 +39,7 @@
                 this.speed = speed;
                 this.long = long;
                 this.width = width;
+                // 添加一个snake属性，作为dom节点：
                 this.snake = document.querySelector('.game-box');
                 this.snake.style.width = width + 'px';
                 this.snake.style.height = width + 'px';
@@ -51,17 +52,23 @@
                         this.snakeArr.push({
                             x: i,
                             y: 0,
-                            color: 'orange'
+                            color: 'orange',
+                            direction: 'right'
                         })
                     } else {
                         this.snakeArr.push({
                             x: i,
                             y: 0,
-                            color: 'red'
+                            color: 'red',
+                            direction: 'right'
                         })
                     }
                 }
+                this.updateSnake()
+                this.move()
+                this.gameControl()
             }
+            // 蛇头的方向
             direction = 'right'
             beforeDirection = 'right'
             // 蛇节点存放
@@ -71,21 +78,20 @@
             // 运行状态
             moveTimer = null
             controlTime = null
+            gameTimer = null
             // 食物存储
             foodArr = []
 
             // 更新视图元素
             updateSnake() {
+                this.foodControl();
                 let allArr = this.foodArr.concat(this.snakeArr)
                 let boxShadow = allArr.reduce((pre, cur, index) => {
-                    // console.log('pre', pre)
                     if (index == allArr.length - 1) {
                         return pre + `${cur.x * this.width}px ${cur.y * this.width}px 0 ${cur.color}`
                     }
                     return pre + `${cur.x * this.width}px ${cur.y * this.width}px 0 ${cur.color},`
                 }, '')
-                // console.log(boxShadow, this.snake)
-                this.foodControl();
                 this.snake.style.boxShadow = boxShadow;
             }
 
@@ -95,8 +101,8 @@
                     // 将最后一个删掉，插入第一个，变化颜色和位置即可
                     let startBody = this.snakeArr.shift();
                     let lastBody = this.snakeArr.at(-1)
-                    startBody.color = 'orange'
-                    lastBody.color = 'red'
+                    startBody.color = 'orange';
+                    lastBody.color = 'red';
                     // console.log(11111112222222222, this.direction)
                     if (this.beforeDirection == 'right' && this.direction == 'left' || this.beforeDirection == 'up' && this.direction == 'down' || this.beforeDirection == 'left' && this.direction == 'right' || this.beforeDirection == 'down' && this.direction == 'up') {
                         this.direction = this.beforeDirection;
@@ -129,11 +135,13 @@
                     // 死亡检测
                     if (this.deadControl()) {
                         console.log('dead!!!!!!')
-                        alert('你挂了！！！！！！')
-                        clearInterval(this.moveTimer)
-                        clearInterval(this.controlTimer)
+                        alert('你挂了！！！！！！');
+                        clearInterval(this.moveTimer);
+                        clearInterval(this.controlTimer);
+                        clearInterval(this.gameTimer);
                         this.moveTimer = null;
                         this.controlTimer = null;
+                        this.gameTimer = null;
                         return;
                     }
                     // 食物检测
@@ -153,7 +161,7 @@
                 document.addEventListener('keyup',function (event) {
                     keyCodes.splice(keyCodes.indexOf(event.keyCode), 1)
                 })
-                setInterval(() => {
+                this.gameTimer = setInterval(() => {
                     if (model === 1 && keyCodes.length > 0) {
                         keyCodes.forEach(item => {
                             switch (item) {
@@ -179,13 +187,13 @@
                                 this.direction = 'left';
                                 break;
                             case 87:
-                                this.direction = 'down';
+                                this.direction = 'up';
                                 break;
                             case 68:
                                 this.direction = 'right';
                                 break;
                             case 83:
-                                this.direction = 'up';
+                                this.direction = 'down';
                                 break;
                             }
                         })
@@ -211,7 +219,7 @@
                 // 2.当碰到墙壁时，判断死亡
                 let sceneWidthCount = Math.floor(document.body.clientWidth / this.width);
                 let sceneHightCount = Math.floor(document.body.clientHeight / this.width);
-                console.log(77777777777, head)
+                // console.log(77777777777, head)
                 // y要大于等于,x要小于1，实测得出结论
                 if (head.x < 1 || head.y < 0 || head.x > sceneWidthCount || head.y >= sceneHightCount) {
                     // console.log(2222222222, isDead)
@@ -223,38 +231,33 @@
             // 被吃完了生成一个食物
             foodControl() {
                 if (this.foodArr.length < 1) {
-                    this.foodInBody();
-                }
-            }
-
-            // 辅助函数，判断食物生成位置
-            foodInBody() {
-                let sceneWidthCount = Math.floor(document.body.clientWidth / this.width);
-                let sceneHightCount = Math.floor(document.body.clientHeight / this.width);
-                // 场景总共的格子数
-                let countSum = sceneWidthCount * sceneHightCount;
-                // 排除有食物和身子的格子
-                let countArr = [];
-                for (let i = 0; i < countSum; i ++) {
-                    countArr.push(i + 1);
-                    // console.log(66666666, JSON.stringify(countArr))
-                    for (let j = 0; j < this.snakeArr.length; j ++) {
-                        if (this.snakeArr[j].x + sceneWidthCount * this.snakeArr[j].y == i + 1) {
-                            countArr.splice(countArr.indexOf(i + 1), 1)
-                            // console.log(9999999999, this.snakeArr[j], i, JSON.stringify(countArr))
-                            break;
+                    let sceneWidthCount = Math.floor(document.body.clientWidth / this.width);
+                    let sceneHightCount = Math.floor(document.body.clientHeight / this.width);
+                    // 场景总共的格子数
+                    let countSum = sceneWidthCount * sceneHightCount;
+                    // 排除有食物和身子的格子
+                    let countArr = [];
+                    for (let i = 0; i < countSum; i ++) {
+                        countArr.push(i + 1);
+                        // console.log(66666666, JSON.stringify(countArr))
+                        for (let j = 0; j < this.snakeArr.length; j ++) {
+                            if (this.snakeArr[j].x + sceneWidthCount * this.snakeArr[j].y == i + 1) {
+                                countArr.splice(countArr.indexOf(i + 1), 1)
+                                // console.log(9999999999, this.snakeArr[j], i, JSON.stringify(countArr))
+                                break;
+                            }
                         }
                     }
+                    let randomNum = Math.floor(Math.random() * countArr.length);
+                    let newX = parseInt(countArr[randomNum] % sceneWidthCount);
+                    let newY = countArr[randomNum] % sceneWidthCount == 0 ? Math.floor((countArr[randomNum]) / sceneWidthCount) - 1 : Math.floor((countArr[randomNum]) / sceneWidthCount);
+                    this.foodArr.push({
+                        x: newX == 0 ? 9 : newX,
+                        y: newY,
+                        color: 'yellow'
+                    })
+                    // console.log(88888777777777,randomNum,countArr[randomNum], this.foodArr)
                 }
-                let randomNum = Math.floor(Math.random() * countArr.length);
-                let newX = parseInt(countArr[randomNum] % sceneWidthCount);
-                let newY = countArr[randomNum] % sceneWidthCount == 0 ? Math.floor((countArr[randomNum]) / sceneWidthCount) - 1 : Math.floor((countArr[randomNum]) / sceneWidthCount);
-                this.foodArr.push({
-                    x: newX == 0 ? 9 : newX,
-                    y: newY,
-                    color: 'yellow'
-                })
-                console.log(88888777777777,randomNum,countArr[randomNum], this.foodArr)
             }
 
             // 吃食物判定
@@ -282,15 +285,12 @@
                         color: 'red'
                     });
                     this.foodArr.splice(0, 1);
-                    console.log(333333333333, JSON.stringify(this.snakeArr), this.foodArr)
+                    // console.log(333333333333, JSON.stringify(this.snakeArr), this.foodArr)
                 }
             }
         }
 
         let snake = new Snake(1, 5, 50);
-        snake.updateSnake()
-        snake.move()
-        snake.gameControl()
     </script>
 </body>
 </html>
